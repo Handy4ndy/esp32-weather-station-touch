@@ -1,17 +1,14 @@
 #include <LittleFS.h>
-
 #include <TJpg_Decoder.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include "GfxUi.h"
 #include <JsonListener.h>
-
-//#include "connectivity.h"
 #include "display.h"
 #include "persistence.h"
 #include "settings.h"
-#include "TransactionDisplay.h" 
+#include "TransactionImage.h"  // Include TransactionImage header
 
 // ----------------------------------------------------------------------------
 // Globals
@@ -25,12 +22,21 @@ GfxUi ui = GfxUi(&tft, &ofr);
 // ----------------------------------------------------------------------------
 // Function prototypes (declarations)
 // ----------------------------------------------------------------------------
-void getLedgerData();
+void fetchLedgerData();
+void displayLedgerData(const String& ledgerIndex, const String& timestamp, int totalTransactions, const JsonArray& transactions);
 String formatTimestamp(const String& timestamp);
-void drawCenteredText(const char* text, int y, uint16_t color, uint8_t size);
+void drawText(const char* text, int x, int y, uint16_t color, uint8_t size, bool clearBackground = false);
+void drawTitleAndFooter();
 
 const char* ssid = "Spencer-wifi";
 const char* password = "fuckoffu";
+
+// ----------------------------------------------------------------------------
+// Previous data variables
+// ----------------------------------------------------------------------------
+String prevLedgerIndex = "";
+String prevTimestamp = "";
+int prevTotalTransactions = -1;
 
 // ----------------------------------------------------------------------------
 // setup() & loop()
@@ -53,23 +59,38 @@ void setup() {
 
     initFileSystem();
     tft.fillScreen(TFT_BLACK);
-    tft.fillScreen(TFT_WHITE);
-    tft.fillScreen(TFT_BLACK);
+
+    // Draw title and footer
+    drawTitleAndFooter();
+
+    setupJpegDecoder();  // Initialize the JPEG decoder
 }
 
 void loop() {
-    getLedgerData();
+    fetchLedgerData();
+    delay(2000);  // Reduce the frequency of data fetching
 }
 
 // ----------------------------------------------------------------------------
 // Functions
 // ----------------------------------------------------------------------------
 
-void getLedgerData() {
+void drawTitleAndFooter() {
+    // Draw title at the top
+    drawText("Desktop Ledger", 40, 10, TFT_WHITE, 3);
+
+    // Draw the data labels
+    drawText("Ledger Index:", 35, 50, TFT_CYAN, 2, true);
+    drawText("Timestamp:", 35, 70, TFT_YELLOW, 2, true);
+    drawText("Total Tx:", 35, 90, TFT_GREEN, 2, true);
+
+    // Draw footer at the bottom right
+    drawText("Created by Handy_4ndy", tft.width() - 130, tft.height() - 20, TFT_WHITE, 1);
+}
+
+void fetchLedgerData() {
     HTTPClient http;
     String url = "https://fast-springs-18239-92ca9a93578c.herokuapp.com/ledger-data";
-
-    //Serial.println("Fetching data...");
 
     http.begin(url);
     int httpCode = http.GET();
@@ -77,7 +98,7 @@ void getLedgerData() {
     if (httpCode > 0) {
         if (httpCode == HTTP_CODE_OK) {
             String payload = http.getString();
-            JsonDocument doc;  // Increase the size if necessary
+            DynamicJsonDocument doc(2048);  // Adjust the size as necessary
             DeserializationError error = deserializeJson(doc, payload);
             if (error) {
                 Serial.print("deserializeJson() failed: ");
@@ -88,56 +109,9 @@ void getLedgerData() {
             const char* ledgerIndex = doc["ledgerIndex"];
             String timestamp = doc["timestamp"].as<String>();
             int totalTransactions = doc["totalTransactions"];
-            JsonObject counts = doc["counts"];
+            JsonArray transactions = doc["transactions"].as<JsonArray>();
 
-            // Format the timestamp to a more readable form
-            String formattedTimestamp = formatTimestamp(timestamp);
-
-            // Display the data with improved layout and colors
-            drawCenteredText("Ledger Index:", 10, TFT_CYAN, 2);
-            drawCenteredText(ledgerIndex, 40, TFT_CYAN, 2);
-
-            drawCenteredText("Timestamp:", 70, TFT_YELLOW, 2);
-            drawCenteredText(formattedTimestamp.c_str(), 100, TFT_YELLOW, 2);
-
-            drawCenteredText("Total Tx:", 130, TFT_GREEN, 2);
-            char totalTxBuffer[16];
-            sprintf(totalTxBuffer, "%d", totalTransactions);
-            drawCenteredText(totalTxBuffer, 160, TFT_GREEN, 2);
-
-            drawCenteredText("Transaction Counts:", 190, TFT_WHITE, 1);
-
-            int y = 210;
-            for (JsonPair count : counts) {
-                char countBuffer[32];
-                sprintf(countBuffer, "%s: %d", count.key().c_str(), count.value().as<int>());
-                drawCenteredText(countBuffer, y, TFT_WHITE, 1);
-                y += 20;
-            }
-
-            for (JsonObject transaction : transactions) {
-                const char* transactionType = transaction["TransactionType"];
-                displayTransaction(transactionType);  // Call the function to display the image based on transaction type
-                delay(2000);  // Adjust delay as necessary
-            }
-
-            
-            Serial.println("Data displayed");
-
-            delay(2000);
-            drawCenteredText(ledgerIndex, 40, TFT_BLACK, 2);
-            drawCenteredText(formattedTimestamp.c_str(), 100, TFT_BLACK, 2);
-            sprintf(totalTxBuffer, "%d", totalTransactions);
-            drawCenteredText(totalTxBuffer, 160, TFT_BLACK, 2);
-            for (JsonPair count : counts) {
-                char countBuffer[32];
-                sprintf(countBuffer, "%s: %d", count.key().c_str(), count.value().as<int>());
-                drawCenteredText(countBuffer, y, TFT_BLACK, 1);
-                y += 20;
-            }
-
-
-            Serial.println("Data displayed");
+            displayLedgerData(ledgerIndex, timestamp, totalTransactions, transactions);
         } else {
             Serial.print("HTTP request failed with error code: ");
             Serial.println(httpCode);
@@ -145,24 +119,67 @@ void getLedgerData() {
     } else {
         Serial.println("HTTP request failed");
     }
+
+    http.end();
+}
+
+void displayLedgerData(const String& ledgerIndex, const String& timestamp, int totalTransactions, const JsonArray& transactions) {
+    // Clear the result section
+    tft.fillRect(195, 50, 100, 60, TFT_BLACK);
+
+    // Draw the updated results
+    String formattedTimestamp = formatTimestamp(timestamp);
+    drawText(ledgerIndex.c_str(), 195, 50, TFT_CYAN, 2, false);
+    drawText(formattedTimestamp.c_str(), 195, 70, TFT_YELLOW, 2, false);
+    char totalTxBuffer[16];
+    sprintf(totalTxBuffer, "%d", totalTransactions);
+    drawText(totalTxBuffer, 195, 90, TFT_GREEN, 2, false);
+
+    // Display transaction images
+    for (JsonObject transaction : transactions) {
+        const char* transactionType = transaction["TransactionType"];
+        displayTransaction(transactionType);  // Display image based on transaction type
+        delay(2000);  // Adjust delay as necessary
+    }
+
+    // Update previous data
+    prevLedgerIndex = ledgerIndex;
+    prevTimestamp = timestamp;
+    prevTotalTransactions = totalTransactions;
+
+    Serial.println("Data displayed");
 }
 
 String formatTimestamp(const String& timestamp) {
-    // Extract date and time only, ignore fractional seconds and timezone
+    // Extract time only, assuming format "YYYY-MM-DD HH:MM:SS"
     int spaceIndex = timestamp.indexOf(' ');
-    int dotIndex = timestamp.indexOf('.');
-    if (spaceIndex > 0 && dotIndex > 0) {
-        return timestamp.substring(0, dotIndex);
+    if (spaceIndex > 0) {
+        String timePart = timestamp.substring(spaceIndex + 1, spaceIndex + 9);  // Get HH:MM:SS
+
+        // Parse hour, minute, second
+        int hour = timePart.substring(0, 2).toInt();
+        int minute = timePart.substring(3, 5).toInt();
+        int second = timePart.substring(6, 8).toInt();
+
+        // Add one hour for BST
+        hour = (hour + 1) % 24;  // Wrap around if hour is 23
+
+        // Format back to HH:MM:SS
+        char formattedTime[9];
+        sprintf(formattedTime, "%02d:%02d:%02d", hour, minute, second);
+        return String(formattedTime);
     }
     return timestamp;  // Return the original if format is unexpected
 }
 
-void drawCenteredText(const char* text, int y, uint16_t color, uint8_t size) {
+void drawText(const char* text, int x, int y, uint16_t color, uint8_t size, bool clearBackground) {
     tft.setTextSize(size);
     int16_t textWidth = tft.textWidth(text);
-    int16_t x = (tft.width() - textWidth) / 2;
+    int16_t textHeight = tft.fontHeight(size);
+    if (clearBackground) {
+        tft.fillRect(x, y, textWidth, textHeight, TFT_BLACK);  // Clear background before drawing
+    }
     tft.setTextColor(color);
     tft.setCursor(x, y);
     tft.print(text);
 }
-
