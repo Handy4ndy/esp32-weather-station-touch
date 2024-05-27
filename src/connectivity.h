@@ -15,4 +15,5 @@ void startWiFi() {
     delay(200);
   }
   log_i("...done. IP: %s, WiFi RSSI: %d.", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+  printf("Wifi Connected");
 }
