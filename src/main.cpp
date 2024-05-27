@@ -11,6 +11,7 @@
 #include "display.h"
 #include "persistence.h"
 #include "settings.h"
+#include "TransactionDisplay.h" 
 
 // ----------------------------------------------------------------------------
 // Globals
@@ -112,6 +113,12 @@ void getLedgerData() {
                 sprintf(countBuffer, "%s: %d", count.key().c_str(), count.value().as<int>());
                 drawCenteredText(countBuffer, y, TFT_WHITE, 1);
                 y += 20;
+            }
+
+            for (JsonObject transaction : transactions) {
+                const char* transactionType = transaction["TransactionType"];
+                displayTransaction(transactionType);  // Call the function to display the image based on transaction type
+                delay(2000);  // Adjust delay as necessary
             }
 
             
