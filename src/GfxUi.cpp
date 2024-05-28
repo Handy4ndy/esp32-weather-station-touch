@@ -5,7 +5,7 @@
 
 #include "GfxUi.h"
 
-#define FS_TP_LOGO "/ThingPulse-logo-260.jpeg"
+#define XRPL_LOGO "/logo.jpeg"
 
 GfxUi::GfxUi(TFT_eSPI *tft, OpenFontRender *ofr) {
   _tft = tft;
@@ -79,10 +79,10 @@ void GfxUi::drawBmp(String filename, uint16_t x, uint16_t y) {
 }
 
 void GfxUi::drawLogo() {
-  if (LittleFS.exists(FS_TP_LOGO)) {
+  if (LittleFS.exists(XRPL_LOGO)) {
     uint16_t w = 0, h = 0;
-    TJpgDec.getFsJpgSize(&w, &h, FS_TP_LOGO, LittleFS);
-    TJpgDec.drawFsJpg((_tft->width() - w) / 2, 30, FS_TP_LOGO, LittleFS);
+    TJpgDec.getFsJpgSize(&w, &h, XRPL_LOGO, LittleFS);
+    TJpgDec.drawFsJpg((_tft->width() - w) / 2, 30, XRPL_LOGO, LittleFS);
   }
 }
 
@@ -99,6 +99,7 @@ void GfxUi::drawProgressBar(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
   _tft->fillRect(x0 + margin, y0 + margin, barWidth * percentage / 100.0,
                  barHeight, barColor);
 }
+
 
 // These read 16- and 32-bit types from the SD card file.
 // BMP data is stored little-endian, Arduino is little-endian too.

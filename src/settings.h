@@ -7,8 +7,8 @@
 // User settings
 // ****************************************************************************
 // WiFi
-//const char *SSID = "Spencer-wifi";
-//const char *WIFI_PWD = "fuckoffu";
+const char *SSID = "Spencer-wifi";
+const char *WIFI_PWD = "fuckoffu";
 
 
 // 2: portrait, on/off switch right side -> 0/0 top left
