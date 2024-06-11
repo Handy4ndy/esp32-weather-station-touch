@@ -6,6 +6,19 @@
 #include "GfxUi.h"
 
 #define XRPL_LOGO "/logo.jpeg"
+// Define the file paths for your images
+#define ACCOUNT_DELETE_BMP "/account-delete.bmp"
+#define ACCOUNT_MODIFY_BMP "/account-modify.bmp"
+#define NFT_ACCEPT_OFFER_BMP "/nft-accept-offer.bmp"
+#define NFT_CREATE_OFFER_MINT_BMP "/nft-create-offer-mint.bmp"
+#define NFT_MODIFY_BMP "/nft-modify.bmp"
+#define NFT_OFFER_CANCEL_BMP "/nft-offer-cancel.bmp"
+#define OFFER_CANCEL_BMP "/offer-cancel.bmp"
+#define OFFER_CREATE_BMP "/offer-create.bmp"
+#define PAYMENT_BMP "/payment.bmp"
+#define TICKET_CREATE_BMP "/ticket-create.bmp"
+#define TRUSTSET_MODIFY_BMP "/trustset-modify.bmp"
+#define UNKNOWN_BMP "/unknown.bmp"
 
 GfxUi::GfxUi(TFT_eSPI *tft, OpenFontRender *ofr) {
   _tft = tft;

@@ -4,6 +4,7 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <JsonListener.h>
+#include <map>
 
 #include "globals.h"
 #include "GfxUi.h"
@@ -39,7 +40,7 @@ void setup() {
     initFileSystem();
     logMemoryStats();
 
-    displaySplashScreen();
+    displaySplashScreen(); 
 
     startWiFi();
     Serial.println("Connected to WiFi network");

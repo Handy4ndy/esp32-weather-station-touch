@@ -1,9 +1,49 @@
+#include <string> // Added to use std::string
+#include <map>
+#include <ArduinoJson.h>
+#include <TJpg_Decoder.h>
+
 #include "displaydata.h"
 #include "globals.h"
-#include <ArduinoJson.h>
+#include "GfxUi.h"
+
+GfxUi gfxUi(&tft, &ofr);
+
+#define NUM_IMAGES 12 // Number of images
+
+// Image file paths
+const char* imagePaths[NUM_IMAGES] = {
+    
+    "/account-modify.bmp",
+    "/nft-accept-offer.bmp",
+    "/nft-create-offer-mint.bmp",
+    "/nft-offer-cancel.bmp",
+    "/offer-cancel.bmp",
+    "/offer-create.bmp",
+    "/payment.bmp",
+    "/ticket-create.bmp",
+    "/trustset-modify.bmp",
+    "/offer-cancel.bmp",
+    "/offer-create.bmp",
+    "/payment.bmp",
+};
+
+// Function to draw images on the screen
+void drawImages() {
+    for (int i = 0; i < NUM_IMAGES; i++) {
+        int randX = random(tft.width());
+        int randY = random(tft.height());
+        gfxUi.drawBmp(imagePaths[i], randX, randY);
+    }
+}
 
 void displaySplashScreen() {
-    ui.drawLogo();
+    unsigned long startTime = millis(); // Get start time
+
+    while (millis() - startTime < 5000) { // Display images for 10 seconds
+        drawImages();   // Draw images on the screen
+        //delay(100); // Adjust animation speed
+    }
 }
 
 void drawTemplate() {
@@ -24,10 +64,7 @@ void displayLedgerData(const String& ledgerIndex, const String& timestamp, int t
     sprintf(totalTxBuffer, "%d", totalTransactions);
     drawText(totalTxBuffer, 195, 90, TFT_GREEN, 2, false);
 
-    /*for (JsonObject transaction : transactions) {
-        const char* transactionType = transaction["TransactionType"];
-        displayTransaction(transactionType);  // Ensure this function is properly declared and defined
-    }*/
+    displayTransactions(transactions);
 
     prevLedgerIndex = ledgerIndex;
     prevTimestamp = timestamp;
@@ -64,22 +101,63 @@ void drawText(const char* text, int x, int y, uint16_t color, uint8_t size, bool
     tft.print(text);
 }
 
-void displayLoadingScreen(int progress) {
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextSize(2);
-    tft.setTextColor(TFT_WHITE);
-    tft.setCursor(10, 10);
-    tft.println("Loading...");
+// Function to display transactions for a ledger
+void displayTransactions(const JsonArray& transactions) {
+    // Define the mapping between transaction types and BMP images
+    std::map<std::string, std::string> transactionImages = {
+        {"Payment", "/payment.bmp"},
+        {"OfferCreate", "/offer-create.bmp"},
+        {"OfferCancel", "/offer-cancel.bmp"},
+        {"TicketCreate", "/ticket-create.bmp"},
+        {"TrustSet", "/trustset-modify.bmp"},
+        {"NFTokenCreateOffer", "/nft-create-offer-mint.bmp"},
+        {"NFTokenAcceptOffer", "/nft-accept-offer.bmp"},
+        {"NFTokenCancelOffer", "/nft-offer-cancel.bmp"},
+        {"AccountSet", "/account-modify.bmp"},
+        {"AccountDelete", "/account-delete.bmp"},
+        {"AMMBid", "/offer-create.bmp"},
+        {"AMMCreate", "/offer-create.bmp"},
+        {"AMMDelete", "/offer-cancel.bmp"},
+        {"NFTokenBurn", "/nft-offer-cancel.bmp"},
+        // Add more mappings as needed
+    };
 
-    int barWidth = 200;
-    int barHeight = 20;
-    int x = (tft.width() - barWidth) / 2;
-    int y = (tft.height() - barHeight) / 2;
-    tft.drawRect(x, y, barWidth, barHeight, TFT_WHITE);
-    int progressWidth = map(progress, 0, 100, 0, barWidth);
-    tft.fillRect(x, y, progressWidth, barHeight, TFT_GREEN);
-}
+    tft.fillRect(0, 130, 320, 330, TFT_BLACK);
 
-void updateProgress(int progress) {
-    displayLoadingScreen(progress);
+    int x = 35; // Initial x-coordinate for BMP image
+    int y = 130; // Initial y-coordinate for BMP image
+    int imageWidth = 12;
+    int imageHeight = 12;
+    
+    int spacing = 10; // Spacing between BMP images
+
+    // Iterate through each transaction
+    for (JsonObject transaction : transactions) {
+        // Retrieve transaction type
+        std::string transactionType = transaction["TransactionType"];
+
+        // Check if the transaction type has a corresponding BMP image
+        if (transactionImages.find(transactionType) != transactionImages.end()) {
+            // Retrieve BMP image path for the transaction type
+            std::string imagePath = transactionImages[transactionType];
+
+            // Draw BMP image on the main screen
+            gfxUi.drawBmp(imagePath.c_str(), x, y);
+
+            x += imageWidth + spacing;
+
+            // Check if reached the end of the screen width
+            if (x + imageWidth > (tft.width() -25)  ) {
+                // Move to the next row
+                x = 35;
+                y += imageHeight + spacing;
+            }
+        } else {
+            // Handle cases where there is no corresponding BMP image for the transaction type
+            Serial.println("No BMP image found for transaction type: " + String(transactionType.c_str()));
+
+
+            gfxUi.drawBmp("/unknown.bmp", x, y);
+        }
+    }
 }

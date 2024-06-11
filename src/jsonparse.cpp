@@ -12,9 +12,9 @@ void parseTransactions(const char* jsonResponse) {
         return;
     }
 
-    /*JsonArray transactions = doc["transactions"];
+    JsonArray transactions = doc["transactions"];
     for (JsonObject transaction : transactions) {
         const char* transactionType = transaction["TransactionType"];
-        displayTransaction(transactionType);  // Ensure this function is properly declared and defined
-    }*/
+        displayTransactions(transactionType);  // Ensure this function is properly declared and defined
+    }
 }

@@ -7,9 +7,8 @@
 // User settings
 // ****************************************************************************
 // WiFi
-const char *SSID = "Spencer-wifi";
-const char *WIFI_PWD = "fuckoffu";
-
+const char *SSID = "your_network_ssid";
+const char *WIFI_PWD = "your_network_password";
 
 // 2: portrait, on/off switch right side -> 0/0 top left
 // 3: landscape, on/off switch at the top -> 0/0 top left
